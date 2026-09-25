@@ -9,18 +9,27 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/Olamilekan-12/go-bank/internal/config"
 )
 
 func main() {
+
+	cfg, err := config.Load()
+
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
 
-	log.Println("Go Bank API listening on :8080")
+	log.Printf("Go Bank API (%s) listening on :%s", cfg.Env, cfg.HTTPPort)
 	srv := &http.Server{
-		Addr:              ":8080",
+		Addr:              ":" + cfg.HTTPPort,
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
@@ -39,7 +48,7 @@ func main() {
 	<-quit
 	log.Println("Shutdown signal received")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
